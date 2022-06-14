@@ -13,13 +13,13 @@ Shaoyu Chen*, Tianheng Cheng*, <a href="https://xinggangw.info/">Xinggang Wang</
 
 ## News
 
-* `June 9, 2022`: We've released the tech report for Geometry-guided Kernel Transformer (GKT). This work is still in progress and code/models are comming sonn. Please stay tuned! ☕️
+* `June 9, 2022`: We've released the tech report for Geometry-guided Kernel Transformer (GKT). This work is still in progress and code/models are coming sonn. Please stay tuned! ☕️
 
 ## Introduction
 
 ![Framework](./assets/GKT-main.png)
 
-We present a novel and efficient **2D-to-BEV** transformation, Geometry-guided Kernel Transformer (GKT)
+We present a novel and efficient **2D-to-BEV** transformation, Geometry-guided Kernel Transformer (GKT).
 
 * GKT leverages geometric priors to guide the transformers to focus on discriminative regions for generating BEV representation with surrouding-view image features.
 * GKT is based on kernel-wise attention and much efficient, especially with LUT indexing.

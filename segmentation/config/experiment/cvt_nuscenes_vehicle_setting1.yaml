@@ -1,0 +1,26 @@
+# @package _global_
+defaults:
+  - override /model: cvt
+  - override /data: nuscenes_vehicle
+
+  - override /loss: center_loss
+  - override /metrics: visibility_metrics
+dataset: nuscenes_generated_setting1
+data:
+  bev:
+    h: 400
+    w: 200
+    h_meters: 100.0
+    w_meters: 50.0
+model:
+  outputs:
+    bev: [0, 1]
+    center: [1, 2]
+  encoder:
+    bev_embedding:
+      sigma: 1.0
+      bev_height: ${data.bev.h}
+      bev_width: ${data.bev.w}
+      h_meters: ${data.bev.h_meters}
+      w_meters: ${data.bev.w_meters}
+      offset: ${data.bev.offset}

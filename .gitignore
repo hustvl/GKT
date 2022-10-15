@@ -36,6 +36,7 @@ model_ts*.txt
 .idea
 .vscode
 _darcs
+.DS_Store
 
 # project dirs
 /models

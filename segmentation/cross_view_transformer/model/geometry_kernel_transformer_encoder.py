@@ -1,3 +1,4 @@
+import numpy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,6 +8,15 @@ from torchvision.models.resnet import Bottleneck
 from typing import List
 from IPython import embed
 
+import numpy as np
+
+def clip_self_define(t, t_min, t_max):
+    t = t.float()
+    # t_min = t_min.float()
+    # t_max = t_max.float()
+    result = (t >= t_min).float() * t + (t < t_min).float() * t_min
+    result = (result <= t_max).float() * result + (result > t_max).float() * t_max
+    return result
 
 def ResNetBottleNeck(c): return Bottleneck(c, c // 4)
 
@@ -171,15 +181,18 @@ class KernelAttention(nn.Module):
                       m=self.heads, d=self.dim_head)
 
         # Dot product attention along cameras
+        # dot = self.scale * \
+        #     torch.einsum('b n Q c d, b n Q K d -> b n Q c K', q, k)
         dot = self.scale * \
-            torch.einsum('b n Q c d, b n Q K d -> b n Q c K', q, k)
+              torch.matmul(q, k.permute(0, 1, 2, 4, 3))
         dot = rearrange(dot, 'b n Q c K -> b Q (n c K)')
         if mask is not None:
             mask = mask.unsqueeze(1).repeat(1, self.heads, 1, 1, num_points)
             mask = rearrange(mask, 'b h n Q g -> (b h) Q (n g)')
             dot[~mask] = -10**9
         att = dot.to(q).softmax(dim=-1)
-        a = torch.einsum('b Q K, b Q K d -> b Q d', att, v)
+        # a = torch.einsum('b Q K, b Q K d -> b Q d', att, v)
+        a = torch.matmul(att.unsqueeze(2),v).squeeze(2)
 
         a = rearrange(a, '(b m) Q d -> b Q (m d)',
                       m=self.heads, d=self.dim_head)
@@ -287,8 +300,19 @@ class IndexBEVProjector(nn.Module):
         # [b, n, k, 9, 2]
         sample_points = sample_points.unsqueeze(-2) + grid_offsets
         # restrict sample_points between 0~H-1
-        sample_points[..., 0].clamp_(min=0, max=w-1)
-        sample_points[..., 1].clamp_(min=0, max=h-1)
+
+
+        sample_points[..., 0].clip_(min=0, max=w-1)
+        sample_points[..., 1].clip_(min=0, max=h-1)
+
+        # sample_points = numpy.clip(sample_points, a_min=0, a_max=w - 1)
+
+        # idmin = torch.where(sample_points < 0)
+        # sample_points[idmin] = 0
+        # idmax = torch.where(sample_points > w-1)
+        # sample_points[idmax] = w - 1
+
+
         # [b, n, k, 9]
         k = sample_points.shape[2]
         sample_points_inds = sample_points[..., 0] + sample_points[..., 1] * w
@@ -568,6 +592,8 @@ class GeometryKernelEncoder(nn.Module):
         self.layers = nn.ModuleList(layers)
 
     def forward(self, batch):
+        # for tensor in batch:
+        #     batch[tensor] = batch[tensor].unsqueeze(0)
         b, n, _, _, _ = batch['image'].shape
 
         # b n c h w
@@ -575,7 +601,12 @@ class GeometryKernelEncoder(nn.Module):
         # b n 3 3
         I_inv = batch['intrinsics'].inverse()
         # b n 4 4
-        E_inv = batch['extrinsics'].inverse()     
+        E_inv = batch['extrinsics'].inverse()
+
+        # # b n 3 3
+        # I_inv = batch['intrinsics']
+        # # b n 4 4
+        # E_inv = batch['extrinsics']
 
         features = [self.down(y) for y in self.backbone(self.norm(image))]
 

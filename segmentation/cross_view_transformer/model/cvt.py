@@ -36,5 +36,6 @@ class CrossViewTransformer(nn.Module):
         x = self.encoder(batch)
         y = self.decoder(x)
         z = self.to_logits(y)
-
+        # outputs = {k: z[:, start:stop] for k, (start, stop) in self.outputs.items()}
+        # return outputs['bev'], outputs['center']
         return {k: z[:, start:stop] for k, (start, stop) in self.outputs.items()}
